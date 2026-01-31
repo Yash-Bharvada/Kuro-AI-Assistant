@@ -69,13 +69,13 @@ export function ResultCard({
             transition={{ type: "spring", duration: 0.5 }}
             className="fixed inset-0 flex items-center justify-center z-40 pointer-events-none p-4"
         >
-            <div className="relative w-full max-w-2xl bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-2xl pointer-events-auto overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="relative w-full max-w-5xl bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-10 shadow-2xl pointer-events-auto overflow-hidden max-h-[90vh] overflow-y-auto">
                 {/* Holographic header line */}
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
 
                 <div className="flex justify-between items-start mb-6">
                     <div className="space-y-1">
-                        <h3 className="text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
+                        <h3 className="text-sm font-bold tracking-[0.2em] text-zinc-500 uppercase">
                             KURO AI
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -95,7 +95,7 @@ export function ResultCard({
                     </button>
                 </div>
 
-                <div className="min-h-[100px] font-mono text-sm leading-relaxed text-zinc-300 mb-6">
+                <div className="min-h-[100px] font-mono text-xl leading-relaxed text-zinc-300 mb-6">
                     {displayedText}
                     <motion.span
                         animate={{ opacity: [0, 1, 0] }}
@@ -121,7 +121,7 @@ export function ResultCard({
                                     sentiment === 'Negative' ? "text-rose-400" : "text-purple-400"
                             )} />
                             <h4 className={cn(
-                                "text-xs font-bold tracking-[0.15em] uppercase",
+                                "text-base font-bold tracking-[0.15em] uppercase",
                                 sentiment === 'Positive' ? "text-emerald-400" :
                                     sentiment === 'Negative' ? "text-rose-400" : "text-purple-400"
                             )}>
@@ -136,7 +136,7 @@ export function ResultCard({
                                 sentiment === 'Negative' ? "bg-rose-500/10 border-rose-500/20" :
                                     "bg-purple-500/10 border-purple-500/20"
                         )}>
-                            <p className="text-sm text-zinc-300 leading-relaxed italic">
+                            <p className="text-lg text-zinc-300 leading-relaxed italic">
                                 "{insights.summary}"
                             </p>
                         </div>
@@ -161,10 +161,10 @@ export function ResultCard({
                                                 transition={{ delay: 0.4 + idx * 0.1 }}
                                                 className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3"
                                             >
-                                                <div className="text-xs font-semibold text-emerald-300 mb-1">
+                                                <div className="text-base font-semibold text-emerald-300 mb-1">
                                                     {like.point}
                                                 </div>
-                                                <div className="text-xs text-zinc-400">
+                                                <div className="text-base text-zinc-400">
                                                     {like.description}
                                                 </div>
                                             </motion.div>
@@ -191,10 +191,10 @@ export function ResultCard({
                                                 transition={{ delay: 0.4 + idx * 0.1 }}
                                                 className="bg-rose-500/5 border border-rose-500/20 rounded-lg p-3"
                                             >
-                                                <div className="text-xs font-semibold text-rose-300 mb-1">
+                                                <div className="text-base font-semibold text-rose-300 mb-1">
                                                     {dislike.point}
                                                 </div>
-                                                <div className="text-xs text-zinc-400">
+                                                <div className="text-base text-zinc-400">
                                                     {dislike.description}
                                                 </div>
                                             </motion.div>
