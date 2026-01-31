@@ -13,51 +13,69 @@ from termcolor import colored
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # System Prompt - Defines Kuro's personality and capabilities
-SYSTEM_PROMPT = """You are Kuro, a Jarvis-style AI assistant. You are intelligent, concise, and action-oriented.
+SYSTEM_PROMPT = """You are Kuro, a friendly AI assistant. You're helpful, conversational, and fun - like a smart friend!
 
-**YOUR CORE BEHAVIOR:**
-- You respond like Jarvis from Iron Man: brief, professional, helpful
-- You NEVER give long explanations unless asked
-- You prefer actions over words
-- You remember important information automatically
+**YOUR PERSONALITY:**
+- Friendly and casual (not too formal)
+- Helpful and proactive  
+- Brief but warm responses
+- You remember things automatically
 
 **YOUR CAPABILITIES:**
 You can call these functions by returning JSON:
 
-1. save_memory - Store important facts, preferences, or information
-   Example: {"function": "save_memory", "arguments": {"text": "User prefers dark mode", "importance": "high", "category": "preference"}}
+1. reply - Chat naturally (greetings, questions, conversation)
+   Example: {"function": "reply", "arguments": {"message": "Hey! What can I do for you?"}}
 
-2. recall_memory - Search your memory for specific information
-   Example: {"function": "recall_memory", "arguments": {"query": "user preferences"}}
+2. save_memory - Remember important info
+   Example: {"function": "save_memory", "arguments": {"text": "User likes coffee", "importance": "medium", "category": "preference"}}
 
-3. run_command - Execute safe shell commands
-   Example: {"function": "run_command", "arguments": {"command": "dir"}}
+3. recall_memory - Search your memory
+   Example: {"function": "recall_memory", "arguments": {"query": "what does user like"}}
 
 4. open_app - Launch applications
    Example: {"function": "open_app", "arguments": {"app_name": "notepad"}}
 
-5. reply - Simple conversational response (no action needed)
-   Example: {"function": "reply", "arguments": {"message": "Hello! How can I help?"}}
+5. web_search - Search Google
+   Example: {"function": "web_search", "arguments": {"query": "Python tutorials"}}
+
+6. tell_joke - Tell a programming joke
+   Example: {"function": "tell_joke", "arguments": {}}
+
+7. system_info - Check battery, CPU, memory, disk
+   Example: {"function": "system_info", "arguments": {"info_type": "battery"}}
+
+8. volume_control - Control system volume
+   Example: {"function": "volume_control", "arguments": {"action": "up"}}
+
+9. take_screenshot - Capture the screen
+   Example: {"function": "take_screenshot", "arguments": {}}
+
+10. run_command - Execute safe shell commands
+    Example: {"function": "run_command", "arguments": {"command": "time"}}
 
 **DECISION RULES:**
-- If user shares a fact, preference, or important info → save_memory
-- If user asks "what do you know about X" → recall_memory
-- If user asks you to open/launch something → open_app
-- If user asks you to run a command → run_command
-- For simple greetings or questions → reply
+- Greetings/chat → reply
+- "remember X" → save_memory
+- "what do you know" → recall_memory
+- "open X" → open_app
+- "search for X" → web_search
+- "tell joke" → tell_joke
+- "check battery" → system_info
+- "volume up" → volume_control
+- "screenshot" → take_screenshot
+- "what time" → run_command
 
 **RESPONSE FORMAT:**
-You MUST respond with valid JSON in this exact format:
+You MUST respond with ONLY valid JSON:
 {
   "function": "function_name",
   "arguments": {
-    "param1": "value1",
-    "param2": "value2"
+    "param1": "value1"
   }
 }
 
 **MEMORY CONTEXT:**
-Below is relevant information from your memory. Use it to inform your responses:
 {context}
 
 **USER MESSAGE:**
@@ -68,55 +86,57 @@ Below is relevant information from your memory. Use it to inform your responses:
 def decide_action(message: str, context: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Send message + context to Gemini and get back a function call decision
-    Returns: {"function": "name", "arguments": {...}}
     """
     
-    # Format context
-    context_text = "\n".join([
-        f"- {mem['content']} (relevance: {mem['score']:.2f})"
-        for mem in context[:3]
-    ]) if context else "No relevant memories found."
+    # Format context for prompt
+    context_str = "\n".join([f"- {item['content']}" for item in context]) if context else "No previous context"
     
-    # Build prompt
-    prompt = SYSTEM_PROMPT.format(
-        context=context_text,
-        message=message
-    )
+    # Build prompt using string replacement to avoid .format() issues with JSON braces
+    prompt = SYSTEM_PROMPT.replace('{context}', context_str).replace('{message}', message)
     
     try:
-        # Use Gemini 1.5 Flash
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use Gemini 3 Flash Preview (Confirmed working in final_gemini_test.py)
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         # Request JSON response
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
-                temperature=0.3,  # Lower temperature for more deterministic responses
+                temperature=0.3,
                 response_mime_type="application/json"
             )
         )
         
-        # Parse JSON response
-        decision = json.loads(response.text)
+        # Debug: Print raw response
+        print(colored(f"📝 Raw Gemini response: {response.text[:200]}...", "cyan"))
         
-        print(colored(f"🧠 Kuro decided: {decision['function']}", "magenta"))
+        # Parse JSON response
+        try:
+            decision = json.loads(response.text)
+        except json.JSONDecodeError as e:
+            print(colored(f"❌ JSON Parse Error: {e}", "red"))
+            print(colored(f"Raw response: {response.text}", "yellow"))
+            
+            # Fallback to simple reply
+            return {
+                "function": "reply",
+                "arguments": {
+                    "message": "I'm having trouble processing that request."
+                }
+            }
+        
+        print(colored(f"🧠 Kuro decided: {decision.get('function', 'unknown')}", "magenta"))
         
         return decision
         
-    except json.JSONDecodeError as e:
-        print(colored(f"❌ JSON Parse Error: {e}", "red"))
-        print(colored(f"Raw response: {response.text}", "yellow"))
-        
-        # Fallback to simple reply
-        return {
-            "function": "reply",
-            "arguments": {
-                "message": "I'm having trouble processing that request."
-            }
-        }
-    
     except Exception as e:
         print(colored(f"❌ Gemini Error: {e}", "red"))
+        print(colored(f"Error type: {type(e).__name__}", "red"))
+        
+        # Print full traceback for debugging
+        import traceback
+        print(colored("Full traceback:", "yellow"))
+        traceback.print_exc()
         
         return {
             "function": "reply",
@@ -125,14 +145,17 @@ def decide_action(message: str, context: List[Dict[str, Any]]) -> Dict[str, Any]
             }
         }
 
-def generate_natural_response(function_result: Dict[str, Any]) -> str:
+def generate_natural_response(result: Dict[str, Any]) -> str:
     """
-    Convert function execution result into a natural language response
+    Extract natural language response from function execution result
     """
-    if "natural_response" in function_result:
-        return function_result["natural_response"]
+    # If the function returned a natural_response, use it
+    if "natural_response" in result:
+        return result["natural_response"]
     
-    if function_result.get("success"):
-        return function_result.get("message", "Done.")
-    else:
-        return function_result.get("message", "Something went wrong.")
+    # Otherwise, use the message field
+    if "message" in result:
+        return result["message"]
+    
+    # Fallback
+    return "Done!"

@@ -105,6 +105,13 @@ async def kuro_endpoint(request: KuroRequest):
         print(colored("🧠 Consulting Gemini...", "yellow"))
         decision = decide_action(message, context)
         
+        # Validate decision structure
+        if not isinstance(decision, dict):
+            raise ValueError(f"Invalid decision format: expected dict, got {type(decision)}")
+        
+        if "function" not in decision:
+            raise ValueError(f"Missing 'function' key in decision: {decision}")
+        
         function_name = decision.get("function")
         arguments = decision.get("arguments", {})
         
@@ -125,8 +132,16 @@ async def kuro_endpoint(request: KuroRequest):
         )
         
     except Exception as e:
-        print(colored(f"❌ ERROR: {e}", "red"))
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        print(colored(f"❌ ERROR: {error_msg}", "red"))
+        print(colored(f"Error type: {type(e).__name__}", "red"))
+        
+        # Return a friendly error response instead of raising HTTP exception
+        return KuroResponse(
+            reply="Sorry, I'm having trouble processing that right now. Can you try again?",
+            function_called="error",
+            success=False
+        )
 
 # Tools Info Endpoint
 @app.get("/tools")
