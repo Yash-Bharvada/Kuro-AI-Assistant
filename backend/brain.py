@@ -5,7 +5,7 @@ Handles intent recognition and decision-making
 
 import os
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import google.generativeai as genai
 from termcolor import colored
 
@@ -16,9 +16,13 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 SYSTEM_PROMPT = """You are Kuro, a friendly AI assistant. You're helpful, conversational, and fun - like a smart friend!
 
 **YOUR PERSONALITY:**
-- Friendly and casual (not too formal)
-- Helpful and proactive  
-- Brief but warm responses
+- Friendly, conversational, and intelligent
+- Helpful and proactive
+- RESPONSES MUST BE OPTIMIZED FOR TTS (Kokoro-82M):
+  - Keep responses concise and conversational
+  - No markdown (*, #, lists)
+  - Use phonetic spelling for unusual words if needed
+  - Use natural punctuation for pauses
 - You remember things automatically
 
 **YOUR CAPABILITIES:**
@@ -36,35 +40,35 @@ You can call these functions by returning JSON:
 4. open_app - Launch applications
    Example: {"function": "open_app", "arguments": {"app_name": "notepad"}}
 
-5. web_search - Search Google
+5. web_scrape - Open website or scrape content
+   Example: {"function": "web_scrape", "arguments": {"target": "youtube", "query": "gaming videos"}}
+   Example: {"function": "web_scrape", "arguments": {"target": "bbc.com"}}
+
+6. web_search - General Google Search
    Example: {"function": "web_search", "arguments": {"query": "Python tutorials"}}
 
-6. tell_joke - Tell a programming joke
+7. tell_joke - Tell a programming joke
    Example: {"function": "tell_joke", "arguments": {}}
 
-7. system_info - Check battery, CPU, memory, disk
+8. system_info - Check battery, CPU, memory, disk
    Example: {"function": "system_info", "arguments": {"info_type": "battery"}}
 
-8. volume_control - Control system volume
+9. volume_control - Control system volume
    Example: {"function": "volume_control", "arguments": {"action": "up"}}
 
-9. take_screenshot - Capture the screen
-   Example: {"function": "take_screenshot", "arguments": {}}
+10. take_screenshot - Capture the screen
+    Example: {"function": "take_screenshot", "arguments": {}}
 
-10. run_command - Execute safe shell commands
+11. run_command - Execute safe shell commands
     Example: {"function": "run_command", "arguments": {"command": "time"}}
 
 **DECISION RULES:**
-- Greetings/chat → reply
-- "remember X" → save_memory
-- "what do you know" → recall_memory
-- "open X" → open_app
-- "search for X" → web_search
-- "tell joke" → tell_joke
-- "check battery" → system_info
-- "volume up" → volume_control
-- "screenshot" → take_screenshot
-- "what time" → run_command
+- "open [app]" (notepad, calc, spotify) → open_app
+- "open [website]" (youtube, google, bbc) → web_scrape
+- "search [site] for [query]" → web_scrape(target=site, query=query)
+- "search for [query]" (general) → web_search
+- "read [site]" → web_scrape
+
 
 **RESPONSE FORMAT:**
 You MUST respond with ONLY valid JSON:
@@ -83,7 +87,7 @@ You MUST respond with ONLY valid JSON:
 
 **YOUR DECISION (JSON only):**"""
 
-def decide_action(message: str, context: List[Dict[str, Any]]) -> Dict[str, Any]:
+def decide_action(message: str, context: List[Dict[str, Any]]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     """
     Send message + context to Gemini and get back a function call decision
     """
@@ -95,17 +99,19 @@ def decide_action(message: str, context: List[Dict[str, Any]]) -> Dict[str, Any]
     prompt = SYSTEM_PROMPT.replace('{context}', context_str).replace('{message}', message)
     
     try:
-        # Use Gemini 3 Flash Preview (Confirmed working in final_gemini_test.py)
-        model = genai.GenerativeModel('gemini-3-flash-preview')
-        
-        # Request JSON response
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=0.3,
-                response_mime_type="application/json"
-            )
+        # Use Gemini 1.5 Flash (Higher rate limits, more stable for free tier)
+        model = genai.GenerativeModel(
+            'gemini-2.5-flash',
+            generation_config={
+                "response_mime_type": "application/json",
+                "temperature": 0.3
+            },
+            safety_settings={
+                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+            }
         )
+        
+        response = model.generate_content(prompt)
         
         # Debug: Print raw response
         print(colored(f"📝 Raw Gemini response: {response.text[:200]}...", "cyan"))
@@ -125,7 +131,13 @@ def decide_action(message: str, context: List[Dict[str, Any]]) -> Dict[str, Any]
                 }
             }
         
-        print(colored(f"🧠 Kuro decided: {decision.get('function', 'unknown')}", "magenta"))
+        # Handle list of actions (multi-step)
+        if isinstance(decision, list):
+            print(colored(f"🧠 Kuro decided on {len(decision)} actions", "magenta"))
+            for i, action in enumerate(decision):
+                print(colored(f"  {i+1}. {action.get('function', 'unknown')}", "magenta"))
+        else:
+            print(colored(f"🧠 Kuro decided: {decision.get('function', 'unknown')}", "magenta"))
         
         return decision
         

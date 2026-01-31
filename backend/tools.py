@@ -89,6 +89,8 @@ def execute_function(function_name: str, arguments: Dict[str, Any]) -> Dict[str,
             return run_command_tool(**arguments)
         elif function_name == "open_app":
             return open_app_tool(**arguments)
+        elif function_name == "web_scrape":
+            return web_scrape_tool(**arguments)
         elif function_name == "web_search":
             return web_search_tool(**arguments)
         elif function_name == "tell_joke":
@@ -198,16 +200,14 @@ def run_command_tool(command: str) -> Dict[str, Any]:
         }
 
 def open_app_tool(app_name: str) -> Dict[str, Any]:
-    """Open an application"""
+    """Open a native application"""
     
     # Map common app names to executables (Windows-focused)
+    # Browsers and websites are handled by web_scrape_tool now
     app_map = {
         "notepad": "notepad.exe",
         "calculator": "calc.exe",
         "calc": "calc.exe",
-        "browser": "start chrome",
-        "chrome": "start chrome",
-        "edge": "start msedge",
         "explorer": "explorer.exe",
         "file explorer": "explorer.exe",
         "paint": "mspaint.exe",
@@ -219,7 +219,10 @@ def open_app_tool(app_name: str) -> Dict[str, Any]:
         "control panel": "control.exe",
         "spotify": "start spotify:",
         "vscode": "code",
-        "vs code": "code"
+        "vs code": "code",
+        "word": "start winword",
+        "excel": "start excel",
+        "powerpoint": "start powerpnt"
     }
     
     executable = app_map.get(app_name.lower(), app_name)
@@ -236,6 +239,77 @@ def open_app_tool(app_name: str) -> Dict[str, Any]:
             "success": False,
             "message": str(e),
             "natural_response": f"Hmm, I couldn't find {app_name}. Is it installed?"
+        }
+
+def web_scrape_tool(target: str, query: str = None) -> Dict[str, Any]:
+    """
+    Open a website or scrape content.
+    target: URL or site name (e.g. "youtube", "bbc.com")
+    query: Optional search term on that site
+    """
+    import requests
+    from bs4 import BeautifulSoup
+    import webbrowser
+    import urllib.parse
+    
+    # 1. Normalize Target to URL
+    url = target
+    if not url.startswith("http"):
+        # simple mapping for common sites
+        common_sites = {
+            "youtube": "https://www.youtube.com",
+            "google": "https://www.google.com",
+            "wikipedia": "https://www.wikipedia.org",
+            "github": "https://github.com",
+            "reddit": "https://www.reddit.com",
+            "stackoverflow": "https://stackoverflow.com",
+            "bbc": "https://www.bbc.com/news"
+        }
+        url = common_sites.get(target.lower(), f"https://www.{target}.com")
+    
+    # 2. Handle Search Query if present
+    if query:
+        # Special handling for YouTube search
+        if "youtube" in url:
+            search_url = f"{url}/results?search_query={urllib.parse.quote(query)}"
+            webbrowser.open(search_url)
+            return {
+                "success": True,
+                "natural_response": f"Opening YouTube search for '{query}'"
+            }
+        
+        # Google search with site: operator
+        domain = url.split("//")[-1].split("/")[0]
+        search_q = f"site:{domain} {query}"
+        search_url = f"https://www.google.com/search?q={urllib.parse.quote(search_q)}"
+        webbrowser.open(search_url)
+        return {
+            "success": True,
+            "natural_response": f"Searching {domain} for '{query}'"
+        }
+    
+    # 3. No Query -> Open Site or Scrape Headline
+    # For now, let's open it to be safe, but also try to fetch title
+    try:
+        webbrowser.open(url)
+        
+        # Simple scrape to get page title/description for context
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=5)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        title = soup.title.string.strip() if soup.title else "the website"
+        
+        return {
+            "success": True,
+            "message": f"Opened {url}",
+            "data": {"title": title, "url": url},
+            "natural_response": f"Opened {title} ({url})"
+        }
+    except Exception as e:
+        return {
+            "success": False, # Fallback but considered partial success as browser likely opened
+            "message": f"Opened browser, but scrape failed: {e}",
+            "natural_response": f"Opening {target} for you."
         }
 
 def web_search_tool(query: str) -> Dict[str, Any]:

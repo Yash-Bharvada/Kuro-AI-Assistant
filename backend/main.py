@@ -16,7 +16,7 @@ load_dotenv()
 # Import Kuro modules
 from memory import init_pinecone, retrieve_context
 from brain import decide_action, generate_natural_response
-from tools import execute_function, AVAILABLE_TOOLS
+from tools import execute_function, AVAILABLE_TOOLS, web_scrape_tool
 
 # Initialize FastAPI
 app = FastAPI(
@@ -106,29 +106,59 @@ async def kuro_endpoint(request: KuroRequest):
         decision = decide_action(message, context)
         
         # Validate decision structure
-        if not isinstance(decision, dict):
-            raise ValueError(f"Invalid decision format: expected dict, got {type(decision)}")
+        if isinstance(decision, dict):
+            # Normalize single decision to list
+            actions = [decision]
+        elif isinstance(decision, list):
+            actions = decision
+            if not actions:
+                raise ValueError("Empty decision list received")
+        else:
+            raise ValueError(f"Invalid decision format: expected dict or list, got {type(decision)}")
         
-        if "function" not in decision:
-            raise ValueError(f"Missing 'function' key in decision: {decision}")
+        results = []
+        function_names = []
         
-        function_name = decision.get("function")
-        arguments = decision.get("arguments", {})
-        
-        # Step 3: Execute Function
-        print(colored(f"⚙️ Executing: {function_name}", "yellow"))
-        result = execute_function(function_name, arguments)
+        # Step 3: Execute Function(s)
+        for action in actions:
+            if "function" not in action:
+                print(colored(f"⚠️ Skipping invalid action: {action}", "red"))
+                continue
+                
+            function_name = action.get("function")
+            arguments = action.get("arguments", {})
+            function_names.append(function_name)
+            
+            print(colored(f"⚙️ Executing: {function_name}", "yellow"))
+            result = execute_function(function_name, arguments)
+            results.append(result)
         
         # Step 4: Generate Response
-        reply = generate_natural_response(result)
+        # If multiple actions, we might want to synthesize a combined response
+        # For now, let's pass the list of results to the natural response generator
+        # Note: generate_natural_response expects a SINGLE dict currently.
+        # We'll pass the LAST valid result for now, but in future should handle combo.
+        # Correction: Let's combine the outputs if possible, or just pick the last one.
+        # Better approach: Pass a synthetic result combining them.
+        
+        if len(results) == 1:
+            final_result = results[0]
+        else:
+            final_result = {
+                "success": all(r.get("success", False) for r in results),
+                "output": "\n".join([str(r.get("output", "")) for r in results]),
+                "function": "multi_action"
+            }
+        
+        reply = generate_natural_response(final_result)
         
         print(colored(f"🤖 KURO: {reply}", "green", attrs=["bold"]))
         print(colored("=" * 60, "cyan"))
         
         return KuroResponse(
             reply=reply,
-            function_called=function_name,
-            success=result.get("success", True)
+            function_called=",".join(function_names),
+            success=final_result.get("success", True)
         )
         
     except Exception as e:

@@ -5,6 +5,7 @@ import { useKuro } from "@/hooks/useKuro";
 import { VoicePoweredOrb } from "@/components/ui/voice-powered-orb";
 import { KuroCommandDock } from "@/components/KuroCommandDock";
 import { AnimatePresence, motion } from "framer-motion";
+import { ResultCard } from "@/components/ResultCard";
 
 export default function Home() {
   const kuro = useKuro();
@@ -22,12 +23,12 @@ export default function Home() {
       .catch(() => setBackendStatus("offline"));
   }, []);
 
-  // Auto-start listening on mount if backend is online
-  useEffect(() => {
-    if (!kuro.isListening && backendStatus === "online") {
-      kuro.start();
-    }
-  }, [backendStatus]);
+  // Manual Mode: Do not auto-start listening on mount
+  // useEffect(() => {
+  //   if (!kuro.isListening && backendStatus === "online") {
+  //     kuro.start();
+  //   }
+  // }, [backendStatus]);
 
   // Handle wake word detection and command processing
   useEffect(() => {
@@ -124,27 +125,17 @@ export default function Home() {
         enableVoiceControl={kuro.isListening && listeningState !== 'processing'}
       />
 
-      {/* Response Overlay */}
+      {/* Response ResultCard */}
       <AnimatePresence>
         {response && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-1/4 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-full px-4"
-          >
-            <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <span className="text-purple-400 text-xl">🤖</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-semibold mb-2">Kuro</h3>
-                  <p className="text-white/80 text-sm leading-relaxed">{response}</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+          <ResultCard
+            transcription={response}
+            sentiment="Neutral" // Backend doesn't send this yet, defaulting
+            confidence={0.98}
+            language_used="English"
+            onClose={() => setResponse("")}
+            isSpeaking={listeningState === 'responding'}
+          />
         )}
       </AnimatePresence>
 
@@ -161,10 +152,10 @@ export default function Home() {
       <div className="fixed top-6 right-6 flex items-center gap-2 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full z-50">
         <div
           className={`w-2 h-2 rounded-full ${backendStatus === "online"
-              ? "bg-green-500"
-              : backendStatus === "offline"
-                ? "bg-red-500"
-                : "bg-yellow-500 animate-pulse"
+            ? "bg-green-500"
+            : backendStatus === "offline"
+              ? "bg-red-500"
+              : "bg-yellow-500 animate-pulse"
             }`}
         />
         <span className="text-xs text-white/80">
@@ -178,6 +169,12 @@ export default function Home() {
           <p className="text-sm text-red-400">{kuro.error}</p>
         </div>
       )}
+
+      {/* Debug: Raw Transcript Display */}
+      <div className="fixed bottom-4 left-4 max-w-sm text-xs text-white/50 pointer-events-none z-50 font-mono">
+        <p>Microphone Input:</p>
+        <p className="text-white/90 bg-black/40 p-2 rounded mt-1 min-h-[1.5em]">{kuro.rawTranscript || "..."}</p>
+      </div>
     </div>
   );
 }
