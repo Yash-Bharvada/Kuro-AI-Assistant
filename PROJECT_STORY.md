@@ -71,6 +71,29 @@ async def kuro_endpoint(request: KuroRequest):
 - **Feedback Loops:** Visual feedback (the orb pulsing) is crucial when audio feedback isn't appropriate. It confirms "I heard you" without breaking the flow.
 - **The Power of "Small" Models:** We learned that for an assistant, speed often trumps raw IQ. Gemini Flash was far better for this use case than larger, slower models.
 
+## What Kuro Can Do
+We designed Kuro to be more than just a chatbot. It has a suite of **native capabilities** that allow it to control your computer:
+
+### ⚙️ System Control
+- **Volume:** *"Turn it up,"* *"Mute the audio,"* *"Set volume to 50%"*
+- **Brightness:** *"Dim the screen,"* *"Maximum brightness"*
+- **Power:** *"Put the PC to sleep,"* *"Restart the system"*
+- **Stats:** *"How much RAM am I using?"* *"Check battery status"*
+
+### 🚀 Apps & Workflow
+- **Launch Apps:** *"Open Spotify,"* *"Launch VS Code,"* *"Open Calculator"*
+- **Window Management:** *"Minimize this window,"* *"Close Chrome"*
+- **Terminal:** *"List files in this folder,"* *"Ping google.com"*
+
+### 🧠 Memory & Knowledge
+- **Store Facts:** *"Remember that my API key is in .env"*
+- **Recall:** *"What did I say about the project structure?"*
+
+### 🌐 Web Automation
+- **Search:** *"Search for Next.js 14 documentation"*
+- **Browse:** *"Open youtube.com"*
+- **Input:** *"Type 'Hello World'"* (Simulate keyboard input)
+
 ## What's next for Kuro AI
 - **Vision Capabilities:** We want to let Kuro "see" the screen. Imagine saying "Summarize this article" or "What's wrong with this code?" while looking at your IDE.
 - **Deeper OS Integration:** File system management, calendar integration, and email handling.

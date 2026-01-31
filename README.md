@@ -1,185 +1,112 @@
-# 🤖 Kuro - Jarvis-Style AI Desktop Assistant
+<div align="center">
 
-A voice-first, function-driven AI assistant that listens, remembers, decides, and acts.
+# 🤖 KURO AI ASSISTANT
+### The Next-Gen Local OS Copilot
 
-## 🏗️ Architecture
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Gemini](https://img.shields.io/badge/Gemini-1.5%20Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Pinecone](https://img.shields.io/badge/Pinecone-Vector_DB-black?style=for-the-badge&logo=pinecone&logoColor=white)](https://www.pinecone.io/)
 
-- **Backend**: Python FastAPI (Port 8000)
-- **Frontend**: Next.js 14 (Port 3000)
-- **Vector DB**: Pinecone (Serverless)
-- **AI**: Google Gemini 2.5 Flash + text-embedding-004
+**Bridge the gap between LLMs and your Operating System.**  
+Kuro isn't just a chatbot—it's an agent that sees your screen, controls your apps, and remembers your life.
+
+[Features](#-features) • [Quick Start](#-quick-start) • [Tech Stack](#-tech-stack) • [Documentation](#-documentation)
+
+</div>
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Environment Setup
+Get Kuro up and running in **seconds** with our unified launcher.
 
-Create a `.env` file in the root directory:
-
-```bash
-cp .env.example .env
+### **The Command**
+```powershell
+.\start_kuro.bat
 ```
-
-Then edit `.env` and add your API keys:
-
-```env
-GOOGLE_API_KEY=your_google_api_key_here
-PINECONE_API_KEY=your_pinecone_api_key_here
-PINECONE_INDEX_NAME=kuro-memory
-PINECONE_ENV=us-east-1
-```
-
-### 2. Backend Setup
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-Backend will run on `http://localhost:8000`
-
-### 3. Frontend Setup
-
-The frontend is already running on port 3000. If you need to restart:
-
-```bash
-cd frontend
-npm run dev
-```
-
-Frontend will run on `http://localhost:3000`
+*> This initializes the Python Backend Neural Core and the Next.js Visual Interface simultaneously.*
 
 ---
 
-## 🎯 How to Use
+## ✨ Features
 
-1. **Open the UI**: Navigate to `http://localhost:3000`
-2. **Start Listening**: Click "Start Listening" button
-3. **Say the Wake Word**: Say "Kuro" followed by your command
-   - Example: *"Kuro, remember that my favorite color is blue"*
-   - Example: *"Kuro, what's my favorite color?"*
-4. **Kuro Responds**: The AI will process your request and respond via voice
+### 🧠 **Active Memory Core**
+Kuro doesn't just process; it *remembers*. Powered by **Pinecone** vector database.
+- **Store Facts**: *"Remember that my API key is in .env"*
+- **Recall Context**: *"What did I say about the project structure?"*
 
----
+### ⚙️ **System Control**
+Direct hardware and OS management. No more digging through settings menus.
+- 🔊 **Volume**: *"Set volume to 50%"*
+- 🔆 **Brightness**: *"Dim the screen"*
+- 🔋 **Power**: *"Put the PC to sleep"* / *"Restart system"*
+- 📊 **Stats**: Real-time CPU & RAM monitoring
 
-## 🧠 Core Capabilities
+### 🚀 **Workflow Automation**
+- **App Launching**: *"Open Spotify"*, *"Launch VS Code"*
+- **Window Management**: *"Minimize this window"*, *"Close Chrome"*
+- **Terminal Access**: execute shell commands directly.
 
-### Voice Interaction
-- Continuous microphone listening
-- Wake word detection ("Kuro")
-- Speech-to-text (browser-based)
-- Text-to-speech responses
-
-### Memory System (RAG)
-- **Long-term memory** stored in Pinecone
-- Automatic context retrieval
-- Semantic search with embeddings
-
-### Function Execution
-Kuro can execute these functions:
-
-- `save_memory` - Store important information
-- `recall_memory` - Search memory
-- `run_command` - Execute safe shell commands
-- `open_app` - Launch applications
-- `reply` - Simple conversational response
+### 🌐 **Web Interaction**
+- **Search**: *"Find documentation for Next.js 14"*
+- **Browse**: *"Open youtube.com"*
+- **Simulate Input**: Automated typing and clicking.
 
 ---
 
-## 📁 Project Structure
+## 🛠 Tech Stack
 
-```
-Kuro-AI-Assistant/
-├── backend/
-│   ├── main.py          # FastAPI app & pipeline
-│   ├── brain.py         # Gemini AI integration
-│   ├── memory.py        # Pinecone vector DB
-│   ├── tools.py         # Function registry
-│   └── requirements.txt
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx     # Main UI
-│   │   └── globals.css
-│   └── hooks/
-│       └── useKuro.ts   # Voice hook
-└── .env.example
-```
+### **Backend (The Brain)**
+- **Framework**: FastAPI (Python)
+- **AI Model**: Google Gemini 2.5 Flash
+- **Memory**: Pinecone Vector Database
+- **TTS**: Kokoro (High-quality local text-to-speech)
+- **Tools**: `pycaw` (Audio), `screen_brightness_control`, `pyautogui`
+
+### **Frontend (The Face)**
+- **Framework**: Next.js 14 (App Router)
+- **Styling**: TailwindCSS + Framer Motion
+- **UI Components**: Lucide React, Shadcn/ui
+- **Visuals**: Futuristic "Jarvis-style" interface
 
 ---
 
-## 🔧 API Endpoints
+## 📦 Installation Guide
 
-### Backend (Port 8000)
+If you're setting this up for the first time:
 
-- `GET /` - Health check
-- `POST /kuro` - Main AI endpoint
-  ```json
-  {
-    "message": "remember that I like pizza"
-  }
-  ```
-- `GET /tools` - List available functions
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/Yash-Bharvada/Kuro-AI-Assistant.git
+   cd Kuro-AI-Assistant
+   ```
 
----
+2. **Backend Setup**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   # Create a .env file with your GOOGLE_API_KEY, PINECONE_API_KEY, etc.
+   ```
 
-## 🎨 UI Features
+3. **Frontend Setup**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
 
-- **Cinematic dark mode** (`#05050A`)
-- **Animated orb** that pulses when processing
-- **Real-time chat history**
-- **Backend connection status**
-- **Voice controls** with visual feedback
-
----
-
-## 🛠️ Troubleshooting
-
-### Backend won't start
-- Check that all environment variables are set in `.env`
-- Verify Python dependencies are installed
-- Ensure Pinecone index is created (happens automatically on first run)
-
-### Frontend shows "Offline"
-- Make sure backend is running on port 8000
-- Check browser console for CORS errors
-
-### Voice not working
-- Grant microphone permissions in browser
-- Chrome/Edge work best for Web Speech API
-- Check browser console for errors
+4. **Launch**
+   Return to the root directory and run:
+   ```powershell
+   .\start_kuro.bat
+   ```
 
 ---
 
-## 🔮 Example Commands
+<div align="center">
 
-Try these with Kuro:
+**Built with ❤️ by Yash Bharvada**  
+*Turning Science Fiction into Reality*
 
-- *"Kuro, remember that my backend uses FastAPI"*
-- *"Kuro, what do you know about my backend?"*
-- *"Kuro, open notepad"*
-- *"Kuro, hello"*
-
----
-
-## 📝 Notes
-
-- The backend uses **Gemini 1.5 Flash** for fast, intelligent responses
-- Memory is stored in **Pinecone** with semantic search
-- The UI is built with **Next.js 14** and **Tailwind CSS 4**
-- Voice recognition uses the **Web Speech API** (browser-based)
-
----
-
-## 🚧 Future Enhancements
-
-- Desktop app integration (Electron)
-- More function tools (file operations, web search, etc.)
-- Multi-language support
-- Custom wake word training
-- Mobile app version
-
----
-
-**Built with ❤️ as a Jarvis-inspired AI assistant**
+</div>
