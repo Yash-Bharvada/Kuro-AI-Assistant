@@ -274,26 +274,70 @@ def system_info_tool(info_type: str = "all") -> Dict[str, Any]:
         info.append(f"RAM: {m.percent}%")
     return {"success": True, "data": "\n".join(info), "natural_response": f"System status:\n{', '.join(info)}"}
 
-def volume_control_tool(action: str, level: int = None) -> Dict[str, Any]:
+def volume_control_tool(action: str = "set", level: int = None) -> Dict[str, Any]:
+    """Control system volume. Uses media keys for up/down to show OSD."""
     try:
-        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-        from ctypes import cast, POINTER
-        from comtypes import CLSCTX_ALL
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        if action == "mute": volume.SetMute(1, None)
-        elif action == "unmute": volume.SetMute(0, None)
-        elif action == "up": 
-            current = volume.GetMasterVolumeLevelScalar()
-            volume.SetMasterVolumeLevelScalar(min(1.0, current + 0.1), None)
-        elif action == "down": 
-            current = volume.GetMasterVolumeLevelScalar()
-            volume.SetMasterVolumeLevelScalar(max(0.0, current - 0.1), None)
-        elif level is not None: volume.SetMasterVolumeLevelScalar(level / 100.0, None)
-        return {"success": True, "natural_response": f"Volume {action}ed." if action in ['mute', 'unmute'] else "Volume adjusted."}
+        import pyautogui
+        
+        # Use media keys for relative changes (Triggers Windows OSD)
+        if action == "mute" or (action == "set" and level == 0):
+            pyautogui.press("volumemute")
+            return {"success": True, "natural_response": ""}
+            
+        elif action == "unmute":
+            # Windows toggle behavior is tricky, but 'volumemute' toggles it. 
+            # If we want to strictly UNMUTE, we might need pycaw, but let's try toggle first.
+           pyautogui.press("volumemute")
+           return {"success": True, "natural_response": ""}
+           
+        elif action == "up":
+            # Press multiple times for significant change (e.g., 5 times = ~10%)
+            pyautogui.press("volumeup", presses=5) 
+            return {"success": True, "natural_response": ""}
+            
+        elif action == "down":
+            pyautogui.press("volumedown", presses=5)
+            return {"success": True, "natural_response": ""}
+            
+        # For setting specific levels, we still need pycaw
+        elif level is not None or action == "set":
+            target_level = level if level is not None else 50
+            
+            try:
+                # Primary Method: Pycaw (Direct System Control)
+                from comtypes import CoInitialize
+                CoInitialize() # Initialize COM for this thread (Critical for FastAPI)
+                from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+                from ctypes import cast, POINTER
+                from comtypes import CLSCTX_ALL
+                
+                devices = AudioUtilities.GetSpeakers()
+                interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                volume = cast(interface, POINTER(IAudioEndpointVolume))
+                volume.SetMasterVolumeLevelScalar(target_level / 100.0, None)
+                
+                # Visual Confirmation (Wiggle)
+                pyautogui.press(['volumeup', 'volumedown'])
+                return {"success": True, "natural_response": ""}
+                
+            except Exception as e:
+                print(colored(f"⚠️ Pycaw failed ({e}), using key-press fallback...", "yellow"))
+                # Fallback Method: Manual Key Presses (Reliable but visual)
+                # 1. Reset to 0 (50 taps down roughly covers 100% on most systems)
+                pyautogui.press('volumedown', presses=50, interval=0.01)
+                
+                # 2. Key up to target (Assuming 2% per step, standard Windows behavior)
+                steps = int(target_level / 2)
+                if steps > 0:
+                    pyautogui.press('volumeup', presses=steps, interval=0.01)
+                    
+                return {"success": True, "natural_response": ""}
+            
+        return {"success": False, "natural_response": ""}
+            
     except Exception as e:
-        return {"success": False, "natural_response": "Volume control failed."}
+        print(colored(f"❌ Volume Error: {e}", "red"))
+        return {"success": False, "natural_response": ""}
 
 def brightness_control_tool(action: str = "set", level: int = None) -> Dict[str, Any]:
     try:
@@ -303,9 +347,9 @@ def brightness_control_tool(action: str = "set", level: int = None) -> Dict[str,
         if action == "set" and level is not None: sbc.set_brightness(level)
         elif action == "up": sbc.set_brightness('+10')
         elif action == "down": sbc.set_brightness('-10')
-        return {"success": True, "natural_response": "Brightness adjusted."}
+        return {"success": True, "natural_response": ""}
     except Exception:
-        return {"success": False, "natural_response": "Brightness control failed."}
+        return {"success": False, "natural_response": ""}
 
 def input_simulation_tool(action: str, text: str = None, key: str = None, x: int = None, y: int = None) -> Dict[str, Any]:
     """Simulate Mouse & Keyboard Input"""
@@ -313,23 +357,19 @@ def input_simulation_tool(action: str, text: str = None, key: str = None, x: int
     try:
         if action == "type" and text:
             pyautogui.write(text, interval=0.05)
-            return {"success": True, "natural_response": f"Typed: {text}"}
         elif action == "press" and key:
             # Handle special keys safely
             pyautogui.press(key)
-            return {"success": True, "natural_response": f"Pressed {key}"}
         elif action == "click":
             pyautogui.click()
-            return {"success": True, "natural_response": "Clicked mouse"}
         elif action == "move" and x is not None and y is not None:
             pyautogui.moveTo(x, y)
-            return {"success": True, "natural_response": f"Moved to {x}, {y}"}
         elif action == "scroll":
             pyautogui.scroll(500) 
-            return {"success": True, "natural_response": "Scrolled."}
-        return {"success": False, "natural_response": "Invalid input command."}
+        
+        return {"success": True, "natural_response": ""}
     except Exception as e:
-        return {"success": False, "natural_response": f"Input simulation failed: {e}"}
+        return {"success": False, "natural_response": ""}
 
 def window_ops_tool(action: str) -> Dict[str, Any]:
     """Manage Windows"""
@@ -338,19 +378,16 @@ def window_ops_tool(action: str) -> Dict[str, Any]:
         if action == "minimize":
             pyautogui.hotkey('win', 'down')
             pyautogui.hotkey('win', 'down')
-            return {"success": True, "natural_response": "Minimized window."}
         elif action == "maximize":
             pyautogui.hotkey('win', 'up')
-            return {"success": True, "natural_response": "Maximized window."}
         elif action == "close":
             pyautogui.hotkey('alt', 'f4')
-            return {"success": True, "natural_response": "Closed window."}
         elif action == "switch":
             pyautogui.hotkey('alt', 'tab')
-            return {"success": True, "natural_response": "Switched window."}
-        return {"success": False, "natural_response": "Unknown window action."}
+        
+        return {"success": True, "natural_response": ""}
     except Exception as e:
-        return {"success": False, "natural_response": "Window operation failed."}
+        return {"success": False, "natural_response": ""}
 
 def power_control_tool(action: str) -> Dict[str, Any]:
     """Power Management"""
@@ -380,5 +417,7 @@ def take_screenshot_tool(filename: str = None) -> Dict[str, Any]:
     except Exception as e:
          return {"success": False, "natural_response": f"Screenshot failed: {e}"}
 
-def reply_tool(message: str) -> Dict[str, Any]:
-    return {"success": True, "message": "Replied", "natural_response": message}
+def reply_tool(message: str = None, text: str = None) -> Dict[str, Any]:
+    # Support both 'message' (prompt spec) and 'text' (common hallucination)
+    response_text = message or text or "I'm here."
+    return {"success": True, "message": "Replied", "natural_response": response_text}

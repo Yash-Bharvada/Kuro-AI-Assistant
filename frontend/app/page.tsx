@@ -71,13 +71,20 @@ export default function Home() {
 
         const data = await response.json();
 
-        // Generate and start Audio FIRST
-        await kuro.speak(data.reply);
+        // Only speak/show if there is a reply
+        if (data.reply) {
+          // Generate and start Audio FIRST
+          await kuro.speak(data.reply);
 
-        // THEN show text and update state (Syncs text reveal with audio start)
-        setResponse(data.reply);
-        setListeningState('responding');
-        setOrbColor('#a855f7'); // Purple for responding
+          // THEN show text and update state (Syncs text reveal with audio start)
+          setResponse(data.reply);
+          setListeningState('responding');
+          setOrbColor('#a855f7'); // Purple for responding
+        } else {
+          // If action was silent, just return to idle immediately
+          setListeningState('idle');
+          setOrbColor(undefined);
+        }
 
         // DO NOT reset state automatically! Persist until user dismisses or talks again.
         // We only reset the visual state when speech ends (optional) or keep it "responding"

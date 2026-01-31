@@ -51,11 +51,15 @@ SYSTEM_PROMPT = """You are Kuro, a highly advanced AI with system-level control.
     Example: {"function": "run_terminal", "arguments": {"command": "mkdir 'Project Kuro'"}}
 
 **DECISION RULES:**
-- "type [text]", "press enter" -> input_simulation
-- "minimize this", "close window" -> window_ops
-- "shutdown", "restart computer" -> power_control
-- "set brightness to 50%" -> brightness_control
-- "run command", "execute" -> run_terminal
+- **Questions / Conversation** ("Who are you?", "Tell me a joke") -> `reply` (or `tell_joke`)
+- **System Actions** ("Volume up", "Brightness 50%", "Minimize") -> `volume_control`, `brightness_control`, `window_ops` (SILENT)
+- **Explicit Typing** ("Type 'Hello'", "Press Enter") -> `input_simulation` (SILENT)
+- **General Commands** -> `run_terminal`
+
+**CRITICAL:** 
+- If the user asks a question, use `reply` to SPEAK the answer. 
+- DO NOT use `input_simulation` unless the user explicitly says "type".
+- System actions are silent; do not use `reply` for them.
 
 **RESPONSE FORMAT:**
 {
