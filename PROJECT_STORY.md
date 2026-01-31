@@ -1,5 +1,13 @@
 # Kuro AI Assistant
 
+![Kuro AI Banner](https://via.placeholder.com/1200x500/05050A/FFFFFF?text=KURO+AI+ASSISTANT)
+
+![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white)
+![Pinecone](https://img.shields.io/badge/Pinecone-000000?style=for-the-badge&logo=pinecone&logoColor=white)
+
 ## Inspiration
 I've always been fascinated by sci-fi assistants like **JARVIS** from Iron Man or **SAMantha** from Her. The idea of a computer that isn't just a tool, but a *companion* that understands you, has always been the ultimate goal of human-computer interaction.
 
@@ -14,7 +22,11 @@ Kuro is a voice-first, fully agentic desktop assistant that runs locally on your
 - **System Control ("Silent Actions"):** Kuro can control your PC hardware. Ask it to "dim the screen," "mute the volume," or "open Spotify," and it just *does it*. Crucially, we implemented a "Silent Action" protocol: for system tasks, it executes silently (visual feedback only), but for questions, it replies vocally. This prevents the annoying "Okay, I turned down the volume" repetition.
 - **Long-Term Memory:** Powered by **Pinecone** vector database, Kuro remembers facts about you ("My favorite color is blue," "I'm working on a React project"). It recalls this context in future conversations.
 - **Intelligent Decision Routing:** Kuro acts as a router. It decides dynamically whether your request needs a function call (open app, system control), a memory storage action, or just a conversational reply.
+
 - **Cinematic UI:** The interface isn't a boring chat window. It's a living, breathing "Orb" that pulses when you speak, glows when it thinks, and animates when it talks.
+
+![Kuro UI Interface](https://via.placeholder.com/800x450/05050A/FFFFFF?text=Kuro+Cinematic+UI)
+*The Orb interface reacting to voice input*
 
 ## How we built it
 We used a hybrid architecture to get the best of both worlds: React's UI capabilities and Python's powerful backend ecosystem.
@@ -26,6 +38,23 @@ We used a hybrid architecture to get the best of both worlds: React's UI capabil
 - **Voice Pipeline:** 
     - **Input:** Web Speech API for low-latency browser-based recognition.
     - **Output:** A custom TTS engine (**Kokoro**) running via the backend to generate high-quality, human-like speech.
+
+```python
+# The Core Intelligence Loop
+@app.post("/kuro")
+async def kuro_endpoint(request: KuroRequest):
+    # 1. Retrieve Context
+    context = retrieve_context(request.message)
+    
+    # 2. Decide Action (Gemini)
+    decision = decide_action(request.message, context)
+    
+    # 3. Execute Silent Actions or Reply
+    for action in decision:
+        execute_function(action)
+        
+    return generate_natural_response(results)
+```
 
 ## Challenges we ran into
 - **Latency is Authority:** In a voice assistant, even a 1-second delay feels broken. We spent a lot of time optimizing the pipeline—switching to Gemini Flash and refining the WebSocket/HTTP handshakes to shave off milliseconds.

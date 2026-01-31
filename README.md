@@ -7,7 +7,7 @@ A voice-first, function-driven AI assistant that listens, remembers, decides, an
 - **Backend**: Python FastAPI (Port 8000)
 - **Frontend**: Next.js 14 (Port 3000)
 - **Vector DB**: Pinecone (Serverless)
-- **AI**: Google Gemini 1.5 Flash + text-embedding-004
+- **AI**: Google Gemini 2.5 Flash + text-embedding-004
 
 ---
 

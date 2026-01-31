@@ -545,13 +545,13 @@ export const VoicePoweredOrb: FC<VoicePoweredOrbProps> = ({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           {isTitle ? (
             <div className="text-center">
-              <h1 className="text-xl md:text-3xl font-bold text-white tracking-[0.2em] font-serif drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] select-none px-4">
+              <h1 className="text-4xl md:text-6xl font-bold text-white tracking-[0.2em] font-serif drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] select-none px-4">
                 {centerText}
               </h1>
               <div className="h-px w-24 mx-auto mt-4 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
             </div>
           ) : (
-            <div className="text-white/80 text-[10px] font-bold tracking-[0.3em] uppercase animate-pulse select-none bg-black/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10">
+            <div className="text-white/80 text-sm font-bold tracking-[0.3em] uppercase animate-pulse select-none bg-black/20 backdrop-blur-sm px-5 py-2 rounded-full border border-white/10">
               {centerText}
             </div>
           )}

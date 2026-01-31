@@ -180,29 +180,29 @@ export default function Home() {
       />
 
       {/* Status Indicator */}
-      <div className="fixed top-6 right-6 flex items-center gap-2 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full z-50">
+      <div className="fixed top-6 right-6 flex items-center gap-2 bg-black/20 backdrop-blur-sm px-6 py-3 rounded-full z-50">
         <div
-          className={`w-2 h-2 rounded-full ${backendStatus === "online"
+          className={`w-3 h-3 rounded-full ${backendStatus === "online"
             ? "bg-green-500"
             : backendStatus === "offline"
               ? "bg-red-500"
               : "bg-yellow-500 animate-pulse"
             }`}
         />
-        <span className="text-xs text-white/80">
+        <span className="text-base text-white/80">
           {backendStatus === "online" ? "Online" : backendStatus === "offline" ? "Offline" : "..."}
         </span>
       </div>
 
       {/* Error Display */}
       {kuro.error && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg backdrop-blur-sm z-50">
-          <p className="text-sm text-red-400">{kuro.error}</p>
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 bg-red-500/20 border border-red-500/50 rounded-lg backdrop-blur-sm z-50">
+          <p className="text-base text-red-400">{kuro.error}</p>
         </div>
       )}
 
       {/* Debug: Raw Transcript Display */}
-      <div className="fixed bottom-4 left-4 max-w-sm text-xs text-white/50 pointer-events-none z-50 font-mono">
+      <div className="fixed bottom-4 left-4 max-w-sm text-sm text-white/50 pointer-events-none z-50 font-mono">
         <p>Microphone Input:</p>
         <p className="text-white/90 bg-black/40 p-2 rounded mt-1 min-h-[1.5em]">{kuro.rawTranscript || "..."}</p>
       </div>

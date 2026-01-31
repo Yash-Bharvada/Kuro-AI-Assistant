@@ -172,9 +172,15 @@ async def kuro_endpoint(request: KuroRequest):
         print(colored(f"❌ ERROR: {error_msg}", "red"))
         print(colored(f"Error type: {type(e).__name__}", "red"))
         
+        reply_msg = "Sorry, I'm having trouble processing that right now. Can you try again?"
+        
+        # Check for Quota/Rate Limit Errors
+        if "429" in error_msg or "ResourceExhausted" in error_msg:
+             reply_msg = "I've hit my brain's thinking limit (Quota Exceeded). Please check your Gemini API keys or try again later."
+        
         # Return a friendly error response instead of raising HTTP exception
         return KuroResponse(
-            reply="Sorry, I'm having trouble processing that right now. Can you try again?",
+            reply=reply_msg,
             function_called="error",
             success=False
         )
