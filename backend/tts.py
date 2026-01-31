@@ -27,7 +27,7 @@ class KuroTTS:
         # pipeline returns a generator or list of (graphemes, phonemes, audio)
         # voice='af_bella' is a good default for female, 'am_michael' for male
         # Let's pick a default voice, 'af_bella' seems popular or 'af_sarah'
-        generator = self.pipeline(text, voice='af_bella', speed=1)
+        generator = self.pipeline(text, voice='af_bella', speed=0.8)
         
         # Concatenate audio segments if multiple sentences
         audio_segments = []

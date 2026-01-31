@@ -25,16 +25,29 @@ AVAILABLE_TOOLS = {
             "query": "What to search for"
         }
     },
-    "run_command": {
-        "description": "Execute a shell command (use with caution)",
+    "run_terminal": {
+        "description": "Execute ANY shell command (System Level)",
         "parameters": {
             "command": "The command to execute"
         }
+    },
+    "run_command": {
+         "description": "Execute a safe shell command (Alias)",
+         "parameters": {
+             "command": "The command to execute"
+         }
     },
     "open_app": {
         "description": "Open an application",
         "parameters": {
             "app_name": "Name of the application to open"
+        }
+    },
+    "web_scrape": {
+        "description": "Open website or scrape content",
+        "parameters": {
+            "target": "URL or site name",
+            "query": "Optional search query"
         }
     },
     "web_search": {
@@ -60,10 +73,39 @@ AVAILABLE_TOOLS = {
             "level": "Optional: volume level 0-100"
         }
     },
+    "brightness_control": {
+        "description": "Control screen brightness",
+        "parameters": {
+            "level": "Brightness level 0-100",
+            "action": "set/get/up/down"
+        }
+    },
     "take_screenshot": {
         "description": "Take a screenshot",
         "parameters": {
             "filename": "Optional: filename for the screenshot"
+        }
+    },
+    "input_simulation": {
+        "description": "Control Mouse & Keyboard",
+        "parameters": {
+            "action": "type/press/click/move/scroll",
+            "text": "For typing",
+            "key": "For pressing",
+            "x": "x-coordinate",
+            "y": "y-coordinate"
+        }
+    },
+    "window_ops": {
+        "description": "Manage Application Windows",
+        "parameters": {
+            "action": "minimize/maximize/close/switch"
+        }
+    },
+    "power_control": {
+        "description": "Power Management",
+        "parameters": {
+            "action": "shutdown/restart/sleep"
         }
     },
     "reply": {
@@ -85,7 +127,7 @@ def execute_function(function_name: str, arguments: Dict[str, Any]) -> Dict[str,
             return save_memory_tool(**arguments)
         elif function_name == "recall_memory":
             return recall_memory_tool(**arguments)
-        elif function_name == "run_command":
+        elif function_name == "run_command" or function_name == "run_terminal":
             return run_command_tool(**arguments)
         elif function_name == "open_app":
             return open_app_tool(**arguments)
@@ -99,8 +141,16 @@ def execute_function(function_name: str, arguments: Dict[str, Any]) -> Dict[str,
             return system_info_tool(**arguments)
         elif function_name == "volume_control":
             return volume_control_tool(**arguments)
+        elif function_name == "brightness_control":
+            return brightness_control_tool(**arguments)
         elif function_name == "take_screenshot":
             return take_screenshot_tool(**arguments)
+        elif function_name == "input_simulation":
+            return input_simulation_tool(**arguments)
+        elif function_name == "window_ops":
+            return window_ops_tool(**arguments)
+        elif function_name == "power_control":
+            return power_control_tool(**arguments)
         elif function_name == "reply":
             return reply_tool(**arguments)
         else:
@@ -124,350 +174,211 @@ def save_memory_tool(text: str, importance: str = "medium", category: str = "fac
         "priority": importance,
         "source": "user"
     }
-    
     success = upsert_memory(text, metadata)
-    
     if success:
-        return {
-            "success": True,
-            "message": "Saved.",
-            "natural_response": "Got it. I'll remember that."
-        }
+        return {"success": True, "message": "Saved.", "natural_response": "Got it. I'll remember that."}
     else:
-        return {
-            "success": False,
-            "message": "Failed to save memory",
-            "natural_response": "Sorry, I couldn't save that."
-        }
+        return {"success": False, "message": "Failed to save memory", "natural_response": "Sorry, I couldn't save that."}
 
 def recall_memory_tool(query: str) -> Dict[str, Any]:
     """Search memory explicitly"""
     memories = retrieve_context(query, top_k=5)
-    
     if memories:
         results = [m["content"] for m in memories]
-        return {
-            "success": True,
-            "message": f"Found {len(memories)} memories",
-            "data": results,
-            "natural_response": f"I found this: {results[0]}"
-        }
+        return {"success": True, "message": f"Found {len(memories)} memories", "data": results, "natural_response": f"I found this: {results[0]}"}
     else:
-        return {
-            "success": False,
-            "message": "No memories found",
-            "natural_response": "I don't remember anything about that."
-        }
+        return {"success": False, "message": "No memories found", "natural_response": "I don't remember anything about that."}
 
 def run_command_tool(command: str) -> Dict[str, Any]:
-    """Execute a shell command (DANGEROUS - use with caution)"""
-    
-    # Whitelist of safe commands (expand as needed)
-    safe_prefixes = [
-        "dir", "ls", "echo", "date", "time", "whoami", "hostname",
-        "ipconfig", "ping", "tracert", "netstat", "systeminfo",
-        "tasklist", "ver", "path", "cd", "pwd"
-    ]
-    
-    if not any(command.lower().startswith(prefix) for prefix in safe_prefixes):
+    """Execute a shell command with safety checks"""
+    # Harmful command blocklist
+    harmful_keywords = ["rm -rf", "format", "del /s /q", "rd /s /q", "mkfs", "dd if="]
+    if any(keyword in command.lower() for keyword in harmful_keywords):
         return {
             "success": False,
-            "message": "Command not in safe list",
-            "natural_response": "Hey, I can't run that command for safety reasons. Let's stick to the safe stuff!"
+            "message": "Harmful command detected",
+            "natural_response": "I cannot execute that command as it may be harmful to your system."
         }
-    
+
     try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=10)
         output = result.stdout.strip()
+        if not output and result.stderr:
+            output = result.stderr.strip()
+            
         return {
-            "success": True,
-            "message": "Command executed",
-            "data": output,
-            "natural_response": f"Here you go! {output[:100]}" if output else "Done!"
+            "success": True, 
+            "message": "Command executed", 
+            "data": output, 
+            "natural_response": f"Executed: {output[:100]}..." if output else "Command executed."
         }
     except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "natural_response": "Oops, that didn't work. Let me try something else!"
-        }
+        return {"success": False, "message": str(e), "natural_response": "Command execution failed."}
 
 def open_app_tool(app_name: str) -> Dict[str, Any]:
     """Open a native application"""
-    
-    # Map common app names to executables (Windows-focused)
-    # Browsers and websites are handled by web_scrape_tool now
     app_map = {
-        "notepad": "notepad.exe",
-        "calculator": "calc.exe",
-        "calc": "calc.exe",
-        "explorer": "explorer.exe",
-        "file explorer": "explorer.exe",
-        "paint": "mspaint.exe",
-        "cmd": "cmd.exe",
-        "terminal": "cmd.exe",
-        "powershell": "powershell.exe",
-        "task manager": "taskmgr.exe",
-        "settings": "start ms-settings:",
-        "control panel": "control.exe",
-        "spotify": "start spotify:",
-        "vscode": "code",
-        "vs code": "code",
-        "word": "start winword",
-        "excel": "start excel",
-        "powerpoint": "start powerpnt"
+        "notepad": "notepad.exe", "calculator": "calc.exe", "calc": "calc.exe",
+        "explorer": "explorer.exe", "paint": "mspaint.exe", "cmd": "cmd.exe",
+        "terminal": "cmd.exe", "powershell": "powershell.exe",
+        "settings": "start ms-settings:", "control panel": "control.exe",
+        "spotify": "start spotify:", "vscode": "code", "word": "start winword",
+        "excel": "start excel", "powerpoint": "start powerpnt", "chrome": "start chrome",
+        "browser": "start chrome"
     }
-    
     executable = app_map.get(app_name.lower(), app_name)
-    
     try:
         subprocess.Popen(executable, shell=True)
-        return {
-            "success": True,
-            "message": f"Opened {app_name}",
-            "natural_response": f"Sure thing! Opening {app_name} for you."
-        }
+        return {"success": True, "message": f"Opened {app_name}", "natural_response": f"Opening {app_name}."}
     except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "natural_response": f"Hmm, I couldn't find {app_name}. Is it installed?"
-        }
+        return {"success": False, "message": str(e), "natural_response": f"Couldn't open {app_name}."}
 
 def web_scrape_tool(target: str, query: str = None) -> Dict[str, Any]:
-    """
-    Open a website or scrape content.
-    target: URL or site name (e.g. "youtube", "bbc.com")
-    query: Optional search term on that site
-    """
-    import requests
-    from bs4 import BeautifulSoup
     import webbrowser
     import urllib.parse
     
-    # 1. Normalize Target to URL
     url = target
     if not url.startswith("http"):
-        # simple mapping for common sites
-        common_sites = {
-            "youtube": "https://www.youtube.com",
-            "google": "https://www.google.com",
-            "wikipedia": "https://www.wikipedia.org",
-            "github": "https://github.com",
-            "reddit": "https://www.reddit.com",
-            "stackoverflow": "https://stackoverflow.com",
-            "bbc": "https://www.bbc.com/news"
-        }
-        url = common_sites.get(target.lower(), f"https://www.{target}.com")
-    
-    # 2. Handle Search Query if present
+         url = f"https://www.google.com/search?q={urllib.parse.quote(target)}"
+         
     if query:
-        # Special handling for YouTube search
-        if "youtube" in url:
-            search_url = f"{url}/results?search_query={urllib.parse.quote(query)}"
-            webbrowser.open(search_url)
-            return {
-                "success": True,
-                "natural_response": f"Opening YouTube search for '{query}'"
-            }
+        url = f"https://www.google.com/search?q={urllib.parse.quote(target + ' ' + query)}"
         
-        # Google search with site: operator
-        domain = url.split("//")[-1].split("/")[0]
-        search_q = f"site:{domain} {query}"
-        search_url = f"https://www.google.com/search?q={urllib.parse.quote(search_q)}"
-        webbrowser.open(search_url)
-        return {
-            "success": True,
-            "natural_response": f"Searching {domain} for '{query}'"
-        }
-    
-    # 3. No Query -> Open Site or Scrape Headline
-    # For now, let's open it to be safe, but also try to fetch title
-    try:
-        webbrowser.open(url)
-        
-        # Simple scrape to get page title/description for context
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=5)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string.strip() if soup.title else "the website"
-        
-        return {
-            "success": True,
-            "message": f"Opened {url}",
-            "data": {"title": title, "url": url},
-            "natural_response": f"Opened {title} ({url})"
-        }
-    except Exception as e:
-        return {
-            "success": False, # Fallback but considered partial success as browser likely opened
-            "message": f"Opened browser, but scrape failed: {e}",
-            "natural_response": f"Opening {target} for you."
-        }
+    webbrowser.open(url)
+    return {"success": True, "message": f"Opened {url}", "natural_response": f"Opening {target}."}
 
 def web_search_tool(query: str) -> Dict[str, Any]:
-    """Search the web (opens browser with search)"""
-    try:
-        import webbrowser
-        search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
-        webbrowser.open(search_url)
-        return {
-            "success": True,
-            "message": f"Searching for: {query}",
-            "natural_response": f"Let me search that for you! Opening browser..."
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "natural_response": "Couldn't open the browser for search."
-        }
+    import webbrowser
+    webbrowser.open(f"https://www.google.com/search?q={query}")
+    return {"success": True, "message": f"Searching {query}", "natural_response": f"Searching for {query}."}
 
 def tell_joke_tool() -> Dict[str, Any]:
-    """Tell a random joke"""
     import random
     jokes = [
         "Why don't programmers like nature? It has too many bugs!",
         "Why do Java developers wear glasses? Because they don't C#!",
-        "How many programmers does it take to change a light bulb? None, that's a hardware problem!",
-        "Why did the developer go broke? Because he used up all his cache!",
-        "What's a programmer's favorite hangout place? The Foo Bar!",
-        "Why do programmers prefer dark mode? Because light attracts bugs!",
-        "I would tell you a UDP joke, but you might not get it.",
-        "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'"
+        "How many programmers does it take to change a light bulb? None, that's a hardware problem!"
     ]
-    joke = random.choice(jokes)
-    return {
-        "success": True,
-        "message": "Joke told",
-        "natural_response": f"Alright, here's one: {joke}"
-    }
+    return {"success": True, "natural_response": random.choice(jokes)}
 
 def system_info_tool(info_type: str = "all") -> Dict[str, Any]:
-    """Get system information"""
-    try:
-        import psutil
-        import platform
-        
-        info = []
-        
-        if info_type in ["battery", "all"]:
-            battery = psutil.sensors_battery()
-            if battery:
-                info.append(f"Battery: {battery.percent}% {'(charging)' if battery.power_plugged else '(on battery)'}")
-        
-        if info_type in ["cpu", "all"]:
-            cpu_percent = psutil.cpu_percent(interval=1)
-            info.append(f"CPU Usage: {cpu_percent}%")
-        
-        if info_type in ["memory", "all"]:
-            memory = psutil.virtual_memory()
-            info.append(f"Memory: {memory.percent}% used ({memory.used // (1024**3)}GB / {memory.total // (1024**3)}GB)")
-        
-        if info_type in ["disk", "all"]:
-            disk = psutil.disk_usage('/')
-            info.append(f"Disk: {disk.percent}% used ({disk.used // (1024**3)}GB / {disk.total // (1024**3)}GB)")
-        
-        if info_type == "all":
-            info.append(f"OS: {platform.system()} {platform.release()}")
-        
-        result = "\n".join(info)
-        return {
-            "success": True,
-            "message": "System info retrieved",
-            "data": result,
-            "natural_response": f"Here's what I found: {result}"
-        }
-    except ImportError:
-        return {
-            "success": False,
-            "message": "psutil not installed",
-            "natural_response": "I need the psutil library to check system info. Want me to help you install it?"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "natural_response": "Couldn't get system info right now."
-        }
+    import psutil
+    info = []
+    if info_type in ["battery", "all"]:
+        b = psutil.sensors_battery()
+        if b: info.append(f"Battery: {b.percent}%")
+    if info_type in ["cpu", "all"]:
+        info.append(f"CPU: {psutil.cpu_percent()}%")
+    if info_type in ["memory", "all"]:
+        m = psutil.virtual_memory()
+        info.append(f"RAM: {m.percent}%")
+    return {"success": True, "data": "\n".join(info), "natural_response": f"System status:\n{', '.join(info)}"}
 
 def volume_control_tool(action: str, level: int = None) -> Dict[str, Any]:
-    """Control system volume (Windows)"""
     try:
+        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
         from ctypes import cast, POINTER
         from comtypes import CLSCTX_ALL
-        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-        
         devices = AudioUtilities.GetSpeakers()
         interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
         volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        if action == "mute":
-            volume.SetMute(1, None)
-            return {"success": True, "natural_response": "Muted!"}
-        elif action == "unmute":
-            volume.SetMute(0, None)
-            return {"success": True, "natural_response": "Unmuted!"}
-        elif action == "up":
+        if action == "mute": volume.SetMute(1, None)
+        elif action == "unmute": volume.SetMute(0, None)
+        elif action == "up": 
             current = volume.GetMasterVolumeLevelScalar()
             volume.SetMasterVolumeLevelScalar(min(1.0, current + 0.1), None)
-            return {"success": True, "natural_response": "Volume up!"}
-        elif action == "down":
+        elif action == "down": 
             current = volume.GetMasterVolumeLevelScalar()
             volume.SetMasterVolumeLevelScalar(max(0.0, current - 0.1), None)
-            return {"success": True, "natural_response": "Volume down!"}
-        elif level is not None:
-            volume.SetMasterVolumeLevelScalar(level / 100.0, None)
-            return {"success": True, "natural_response": f"Set volume to {level}%!"}
-    except ImportError:
-        return {
-            "success": False,
-            "natural_response": "I need the pycaw library for volume control. Let me know if you want to install it!"
-        }
+        elif level is not None: volume.SetMasterVolumeLevelScalar(level / 100.0, None)
+        return {"success": True, "natural_response": f"Volume {action}ed." if action in ['mute', 'unmute'] else "Volume adjusted."}
     except Exception as e:
-        return {"success": False, "natural_response": "Couldn't control volume right now."}
+        return {"success": False, "natural_response": "Volume control failed."}
+
+def brightness_control_tool(action: str = "set", level: int = None) -> Dict[str, Any]:
+    try:
+        import screen_brightness_control as sbc
+        if action == "get":
+            return {"success": True, "natural_response": f"Brightness: {sbc.get_brightness()[0]}%"}
+        if action == "set" and level is not None: sbc.set_brightness(level)
+        elif action == "up": sbc.set_brightness('+10')
+        elif action == "down": sbc.set_brightness('-10')
+        return {"success": True, "natural_response": "Brightness adjusted."}
+    except Exception:
+        return {"success": False, "natural_response": "Brightness control failed."}
+
+def input_simulation_tool(action: str, text: str = None, key: str = None, x: int = None, y: int = None) -> Dict[str, Any]:
+    """Simulate Mouse & Keyboard Input"""
+    import pyautogui
+    try:
+        if action == "type" and text:
+            pyautogui.write(text, interval=0.05)
+            return {"success": True, "natural_response": f"Typed: {text}"}
+        elif action == "press" and key:
+            # Handle special keys safely
+            pyautogui.press(key)
+            return {"success": True, "natural_response": f"Pressed {key}"}
+        elif action == "click":
+            pyautogui.click()
+            return {"success": True, "natural_response": "Clicked mouse"}
+        elif action == "move" and x is not None and y is not None:
+            pyautogui.moveTo(x, y)
+            return {"success": True, "natural_response": f"Moved to {x}, {y}"}
+        elif action == "scroll":
+            pyautogui.scroll(500) 
+            return {"success": True, "natural_response": "Scrolled."}
+        return {"success": False, "natural_response": "Invalid input command."}
+    except Exception as e:
+        return {"success": False, "natural_response": f"Input simulation failed: {e}"}
+
+def window_ops_tool(action: str) -> Dict[str, Any]:
+    """Manage Windows"""
+    import pyautogui
+    try:
+        if action == "minimize":
+            pyautogui.hotkey('win', 'down')
+            pyautogui.hotkey('win', 'down')
+            return {"success": True, "natural_response": "Minimized window."}
+        elif action == "maximize":
+            pyautogui.hotkey('win', 'up')
+            return {"success": True, "natural_response": "Maximized window."}
+        elif action == "close":
+            pyautogui.hotkey('alt', 'f4')
+            return {"success": True, "natural_response": "Closed window."}
+        elif action == "switch":
+            pyautogui.hotkey('alt', 'tab')
+            return {"success": True, "natural_response": "Switched window."}
+        return {"success": False, "natural_response": "Unknown window action."}
+    except Exception as e:
+        return {"success": False, "natural_response": "Window operation failed."}
+
+def power_control_tool(action: str) -> Dict[str, Any]:
+    """Power Management"""
+    import os
+    try:
+        if action == "shutdown":
+            os.system("shutdown /s /t 10")
+            return {"success": True, "natural_response": "Shutting down in 10 seconds..."}
+        elif action == "restart":
+            os.system("shutdown /r /t 10")
+            return {"success": True, "natural_response": "Restarting in 10 seconds..."}
+        elif action == "sleep":
+            os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+            return {"success": True, "natural_response": "Going to sleep..."}
+        return {"success": False, "natural_response": "Unknown power action."}
+    except Exception as e:
+        return {"success": False, "natural_response": "Power control failed."}
 
 def take_screenshot_tool(filename: str = None) -> Dict[str, Any]:
-    """Take a screenshot"""
+    import pyautogui
+    from datetime import datetime
+    if not filename: filename = f"kuro_screen_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    path = os.path.join(os.path.expanduser("~"), "Pictures", filename)
     try:
-        import pyautogui
-        from datetime import datetime
-        
-        if not filename:
-            filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        
-        screenshot = pyautogui.screenshot()
-        filepath = os.path.join(os.path.expanduser("~"), "Pictures", filename)
-        screenshot.save(filepath)
-        
-        return {
-            "success": True,
-            "message": f"Screenshot saved to {filepath}",
-            "natural_response": f"Got it! Screenshot saved to {filepath}"
-        }
-    except ImportError:
-        return {
-            "success": False,
-            "natural_response": "I need the pyautogui library to take screenshots. Want me to help install it?"
-        }
+        pyautogui.screenshot().save(path)
+        return {"success": True, "natural_response": f"Screenshot saved to {path}"}
     except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "natural_response": "Couldn't take a screenshot right now."
-        }
+         return {"success": False, "natural_response": f"Screenshot failed: {e}"}
 
 def reply_tool(message: str) -> Dict[str, Any]:
-    """Simple reply (no action)"""
-    return {
-        "success": True,
-        "message": "Reply sent",
-        "natural_response": message
-    }
+    return {"success": True, "message": "Replied", "natural_response": message}

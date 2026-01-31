@@ -17,6 +17,9 @@ load_dotenv()
 from memory import init_pinecone, retrieve_context
 from brain import decide_action, generate_natural_response
 from tools import execute_function, AVAILABLE_TOOLS, web_scrape_tool
+# Add TTS
+from tts import tts_engine
+from fastapi.responses import Response
 
 # Initialize FastAPI
 app = FastAPI(
@@ -42,6 +45,9 @@ class KuroResponse(BaseModel):
     reply: str
     function_called: str = None
     success: bool = True
+
+class TTSRequest(BaseModel):
+    text: str
 
 # Initialize Pinecone on startup
 @app.on_event("startup")
@@ -172,6 +178,23 @@ async def kuro_endpoint(request: KuroRequest):
             function_called="error",
             success=False
         )
+
+@app.post("/tts")
+async def tts_endpoint(request: TTSRequest):
+    """Generate audio from text using Kokoro"""
+    if not request.text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    
+    try:
+        audio_buffer = tts_engine.generate_audio(request.text)
+        if not audio_buffer:
+             raise HTTPException(status_code=500, detail="Failed to generate audio")
+             
+        # Return as streaming response or direct bytes
+        return Response(content=audio_buffer.read(), media_type="audio/wav")
+    except Exception as e:
+        print(colored(f"❌ TTS Error: {e}", "red"))
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Tools Info Endpoint
 @app.get("/tools")

@@ -47,7 +47,7 @@ export function ResultCard({
             } else {
                 clearInterval(interval);
             }
-        }, 30); // Adjust speed here
+        }, 75); // Adjust speed here
 
         return () => clearInterval(interval);
     }, [transcription]);
@@ -76,28 +76,11 @@ export function ResultCard({
                 <div className="flex justify-between items-start mb-6">
                     <div className="space-y-1">
                         <h3 className="text-[10px] font-bold tracking-[0.2em] text-zinc-500 uppercase">
-                            Analysis Complete
+                            KURO AI
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className={cn(
-                                "px-2 py-0.5 rounded text-xs font-medium border",
-                                getSentimentColor(sentiment)
-                            )}>
-                                {sentiment}
-                            </span>
-                            <span className="text-xs text-zinc-500 font-mono">
-                                {Math.round(confidence * 100)}% Conf
-                            </span>
-                            {uncertainty !== undefined && (
-                                <span className="text-xs text-zinc-600 font-mono border-l border-zinc-700 pl-2">
-                                    {Math.round(uncertainty * 100)}% Uncertainty
-                                </span>
-                            )}
-                            <span className="text-xs text-zinc-500 font-mono border-l border-zinc-700 pl-2 uppercase">
-                                {language_used}
-                            </span>
                             {isSpeaking && (
-                                <span className="flex items-center gap-1 text-xs text-purple-400 border-l border-zinc-700 pl-2">
+                                <span className="flex items-center gap-1 text-xs text-purple-400 border-l border-zinc-700 pl-2 first:pl-0 first:border-l-0">
                                     <Volume2 className="w-3 h-3 animate-pulse" />
                                     Speaking...
                                 </span>

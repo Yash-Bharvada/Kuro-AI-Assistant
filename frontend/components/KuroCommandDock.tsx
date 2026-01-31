@@ -5,8 +5,9 @@ import { Mic, Square, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface KuroCommandDockProps {
+export interface KuroCommandDockProps {
     isListening: boolean;
+    isSpeaking: boolean;
     listeningState: 'idle' | 'wake-word-detected' | 'processing' | 'responding';
     onToggleListening: () => void;
     onTextSubmit: (text: string) => void;
@@ -15,6 +16,7 @@ interface KuroCommandDockProps {
 
 export function KuroCommandDock({
     isListening,
+    isSpeaking,
     listeningState,
     onToggleListening,
     onTextSubmit,
@@ -37,15 +39,16 @@ export function KuroCommandDock({
     };
 
     const getStatusText = () => {
+        if (isSpeaking) return "Click to stop speaking";
         switch (listeningState) {
             case 'wake-word-detected':
-                return 'Wake word detected! Listening for command...';
+                return 'Voice detected. Recording...';
             case 'processing':
-                return 'Processing your request...';
+                return 'Processing request...';
             case 'responding':
-                return 'Kuro is responding...';
+                return 'Speaking response...';
             default:
-                return isListening ? 'Listening for "Kuro"...' : 'Click mic to start listening';
+                return isListening ? 'Listening for speech...' : '';
         }
     };
 
@@ -57,21 +60,15 @@ export function KuroCommandDock({
         >
             {/* Status Text */}
             <AnimatePresence mode="wait">
-                {(isListening || lastCommand) && (
+                {(isListening || lastCommand || isSpeaking) && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         className="text-white/60 text-sm text-center"
                     >
-                        {lastCommand ? (
-                            <div className="flex flex-col gap-1">
-                                <span className="text-white/40 text-xs">Last command:</span>
-                                <span className="text-white/80">{lastCommand}</span>
-                            </div>
-                        ) : (
-                            <span>{getStatusText()}</span>
-                        )}
+                        {/* Just show status text, removed Last Command as requested */}
+                        <span>{getStatusText()}</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -82,9 +79,10 @@ export function KuroCommandDock({
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder='Say "Kuro" or type your command...'
+                    placeholder='Ask Kuro anything...'
                     className="flex-1 bg-transparent outline-none text-white placeholder-zinc-500 font-medium"
-                    disabled={listeningState === 'processing' || listeningState === 'responding'}
+                    // Disable input only when processing, allow typing while speaking/listening
+                    disabled={listeningState === 'processing'}
                 />
 
                 <div className="relative">
@@ -103,20 +101,25 @@ export function KuroCommandDock({
                             </motion.button>
                         ) : (
                             <motion.button
-                                key="mic"
+                                key={isSpeaking ? "stop" : "mic"}
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.5, opacity: 0 }}
                                 onClick={onToggleListening}
-                                disabled={listeningState === 'processing' || listeningState === 'responding'}
+                                // Allow interaction if speaking (to stop) or idle. Only disable when processing in backend.
+                                disabled={listeningState === 'processing'}
                                 className={cn(
                                     "p-2 rounded-full transition-all duration-300",
                                     isListening
                                         ? "bg-green-500/20 text-green-500 hover:bg-green-500/30"
-                                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                        : isSpeaking
+                                            ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                            : "text-zinc-400 hover:text-white hover:bg-white/5"
                                 )}
                             >
-                                {isListening ? (
+                                {isSpeaking ? (
+                                    <Square className="w-5 h-5 fill-current" />
+                                ) : isListening ? (
                                     <div className="relative">
                                         <Mic className="w-5 h-5" />
                                         {listeningState === 'wake-word-detected' && (

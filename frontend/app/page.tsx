@@ -37,6 +37,17 @@ export default function Home() {
     }
   }, [kuro.transcript]);
 
+  // Safety: If Kuro stops listening (e.g. timeout/error) and we are not processing, reset state
+  useEffect(() => {
+    if (!kuro.isListening && listeningState === 'idle') {
+      // Already idle, do nothing
+    } else if (!kuro.isListening && listeningState !== 'processing' && listeningState !== 'responding') {
+      // If mic stopped but we are not processing/responding, reset to idle
+      setListeningState('idle');
+      setOrbColor(undefined);
+    }
+  }, [kuro.isListening, listeningState]);
+
   const handleCommand = async (command: string) => {
     if (!command.trim()) return;
 
@@ -59,19 +70,22 @@ export default function Home() {
         if (!response.ok) throw new Error("Backend error");
 
         const data = await response.json();
+
+        // Generate and start Audio FIRST
+        await kuro.speak(data.reply);
+
+        // THEN show text and update state (Syncs text reveal with audio start)
         setResponse(data.reply);
         setListeningState('responding');
         setOrbColor('#a855f7'); // Purple for responding
 
-        // Speak the response
-        kuro.speak(data.reply);
-
-        // Reset after speaking
+        // DO NOT reset state automatically! Persist until user dismisses or talks again.
+        // We only reset the visual state when speech ends (optional) or keep it "responding"
+        // Let's keep it "responding" while speaking, then "idle" but keep response visible.
         setTimeout(() => {
-          setListeningState('idle');
+          setListeningState('idle'); // Just reset the orb state, keep response text
           setOrbColor(undefined);
-          setResponse("");
-        }, 3000);
+        }, 3000); // Visual reset only
 
       } catch (error) {
         console.error("Error:", error);
@@ -91,11 +105,20 @@ export default function Home() {
   };
 
   const handleToggleListening = () => {
+    // If speaking, button acts as STOP
+    if (kuro.isSpeaking) {
+      kuro.cancelSpeech();
+      return;
+    }
+
+    // Normal Mic Toggle
     if (kuro.isListening) {
       kuro.stop();
       setListeningState('idle');
       setOrbColor(undefined);
     } else {
+      // Clear previous response when starting new session
+      setResponse("");
       kuro.start();
     }
   };
@@ -103,11 +126,11 @@ export default function Home() {
   const getOrbCenterText = () => {
     switch (listeningState) {
       case 'wake-word-detected':
-        return 'WAKE WORD DETECTED';
+        return 'RECORDING';
       case 'processing':
         return 'PROCESSING';
       case 'responding':
-        return 'RESPONDING';
+        return 'SPEAKING';
       default:
         return kuro.isListening ? 'LISTENING' : 'KURO AI';
     }
@@ -130,11 +153,11 @@ export default function Home() {
         {response && (
           <ResultCard
             transcription={response}
-            sentiment="Neutral" // Backend doesn't send this yet, defaulting
+            sentiment="Neutral"
             confidence={0.98}
             language_used="English"
             onClose={() => setResponse("")}
-            isSpeaking={listeningState === 'responding'}
+            isSpeaking={listeningState === 'responding' || kuro.isSpeaking}
           />
         )}
       </AnimatePresence>
@@ -142,8 +165,9 @@ export default function Home() {
       {/* Command Dock */}
       <KuroCommandDock
         isListening={kuro.isListening}
+        isSpeaking={kuro.isSpeaking} // Pass speaking state
         listeningState={listeningState}
-        onToggleListening={handleToggleListening}
+        onToggleListening={handleToggleListening} // Use same handler (it now handles stop speech too)
         onTextSubmit={handleTextSubmit}
         lastCommand={lastCommand}
       />
