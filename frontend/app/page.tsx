@@ -14,6 +14,7 @@ export default function Home() {
   const [lastCommand, setLastCommand] = useState<string>("");
   const [orbColor, setOrbColor] = useState<string | undefined>(undefined);
   const [response, setResponse] = useState<string>("");
+  const [audioDuration, setAudioDuration] = useState<number>(0);
 
   // Check backend status on mount
   useEffect(() => {
@@ -73,8 +74,9 @@ export default function Home() {
 
         // Only speak/show if there is a reply
         if (data.reply) {
-          // Generate and start Audio FIRST
-          await kuro.speak(data.reply);
+          // Generate and start Audio FIRST, await duration
+          const duration = await kuro.speak(data.reply);
+          setAudioDuration(duration);
 
           // THEN show text and update state (Syncs text reveal with audio start)
           setResponse(data.reply);
@@ -165,6 +167,7 @@ export default function Home() {
             language_used="English"
             onClose={() => setResponse("")}
             isSpeaking={listeningState === 'responding' || kuro.isSpeaking}
+            duration={audioDuration}
           />
         )}
       </AnimatePresence>

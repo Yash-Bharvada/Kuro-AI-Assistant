@@ -9,7 +9,7 @@ interface UseKuroReturn {
     rawTranscript: string;
     start: () => void;
     stop: () => void;
-    speak: (text: string) => void;
+    speak: (text: string) => Promise<number>;
     cancelSpeech: () => void;
     error: string | null;
 }
@@ -169,42 +169,60 @@ export function useKuro(): UseKuroReturn {
         }
     }, []);
 
-    const speak = useCallback(async (text: string) => {
-        try {
-            cancelSpeech(); // Stop any previous
-            setIsSpeaking(true);
+    const speak = useCallback(async (text: string): Promise<number> => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                cancelSpeech(); // Stop any previous
+                setIsSpeaking(true);
 
-            console.log("🔊 Requesting TTS for:", text);
-            const response = await fetch("http://localhost:8000/tts", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
-            });
+                console.log("🔊 Requesting TTS for:", text);
+                const response = await fetch("http://localhost:8000/tts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                });
 
-            if (!response.ok) throw new Error("TTS request failed");
+                if (!response.ok) throw new Error("TTS request failed");
 
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const audio = new Audio(url);
-            audioRef.current = audio;
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audioRef.current = audio;
 
-            audio.onended = () => {
-                URL.revokeObjectURL(url);
+                // Wait for metadata to get duration
+                audio.onloadedmetadata = () => {
+                    const durationMs = audio.duration * 1000;
+                    console.log(`🔊 Audio duration: ${durationMs}ms`);
+                    // We don't resolve here because we want to play it first? 
+                    // No, we want to return duration SOONER so UI can start typing.
+                    resolve(durationMs);
+                    audio.play().catch(e => console.error("Play error:", e));
+                };
+
+                audio.onended = () => {
+                    URL.revokeObjectURL(url);
+                    setIsSpeaking(false);
+                    audioRef.current = null;
+                };
+
+                audio.onerror = (e) => {
+                    setIsSpeaking(false);
+                    audioRef.current = null;
+                    console.error("Audio error", e);
+                    resolve(0); // Resolve even on error to prevent blocking
+                };
+
+                // Fallback if metadata never loads (rare)
+                setTimeout(() => {
+                    if (!audio.duration) resolve(0);
+                }, 5000);
+
+            } catch (error) {
+                console.error("TTS Error:", error);
                 setIsSpeaking(false);
-                audioRef.current = null;
-            };
-
-            audio.onerror = () => {
-                setIsSpeaking(false);
-                audioRef.current = null;
-            };
-
-            await audio.play();
-            console.log("🔊 Playing audio...");
-        } catch (error) {
-            console.error("TTS Error:", error);
-            setIsSpeaking(false);
-        }
+                resolve(0);
+            }
+        });
     }, []);
 
     const cancelSpeech = useCallback(() => {

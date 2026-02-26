@@ -1,49 +1,53 @@
 import os
 import io
-import soundfile as sf
-import numpy as np
-from kokoro import KPipeline
+from groq import Groq
 from termcolor import colored
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class KuroTTS:
     def __init__(self):
-        print(colored("🎤 Initializing Kokoro TTS...", "cyan"))
+        print(colored("🎤 Initializing Groq TTS...", "cyan"))
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+             print(colored("❌ Groq API Key missing in .env", "red"))
+             self.client = None
+             return
+
         try:
-            # lang_code='a' is likely American English (check documentation if fails)
-            # This might download the model on first run
-            self.pipeline = KPipeline(lang_code='a') 
-            print(colored("✅ Kokoro TTS Ready", "green"))
+            self.client = Groq(api_key=api_key)
+            print(colored("✅ Groq TTS Ready", "green"))
         except Exception as e:
-            print(colored(f"❌ Failed to load Kokoro TTS: {e}", "red"))
-            self.pipeline = None
+            print(colored(f"❌ Failed to initialize Groq TTS: {e}", "red"))
+            self.client = None
 
     def generate_audio(self, text: str):
-        if not self.pipeline:
-            raise RuntimeError("TTS Pipeline not initialized")
-
-        print(colored(f"🗣️  Generating audio via Kokoro: '{text[:30]}...'", "cyan"))
-        
-        # Generate audio
-        # pipeline returns a generator or list of (graphemes, phonemes, audio)
-        # voice='af_bella' is a good default for female, 'am_michael' for male
-        # Let's pick a default voice, 'af_bella' seems popular or 'af_sarah'
-        generator = self.pipeline(text, voice='af_bella', speed=0.8)
-        
-        # Concatenate audio segments if multiple sentences
-        audio_segments = []
-        for _, _, audio in generator:
-            audio_segments.append(audio)
-            
-        if not audio_segments:
+        if not self.client:
+            print(colored("❌ TTS Client not initialized", "red"))
             return None
-            
-        full_audio = np.concatenate(audio_segments)
+
+        print(colored(f"🗣️  Generating audio via Groq: '{text[:30]}...'", "cyan"))
         
-        # Convert to WAV bytes
-        buffer = io.BytesIO()
-        sf.write(buffer, full_audio, 24000, format='WAV') # Kokoro usually 24khz
-        buffer.seek(0)
-        return buffer
+        try:
+            response = self.client.audio.speech.create(
+                model="canopylabs/orpheus-v1-english",
+                voice="autumn",
+                response_format="wav",
+                input=text,
+            )
+            
+            # Convert binary content to BytesIO buffer to match existing interface
+            # Note: BinaryAPIResponse might need .read() or .content depending on version
+            # User snippet used stream_to_file. .read() should get all bytes.
+            audio_data = response.read()
+            buffer = io.BytesIO(audio_data)
+            buffer.seek(0)
+            return buffer
+
+        except Exception as e:
+            print(colored(f"❌ Groq TTS Generation Error: {e}", "red"))
+            return None
 
 # Singleton instance
 tts_engine = KuroTTS()

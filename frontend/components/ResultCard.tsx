@@ -22,6 +22,7 @@ interface ResultCardProps {
     language_used: string;
     insights?: Insights;
     isSpeaking?: boolean;
+    duration?: number;
     onClose: () => void;
 }
 
@@ -33,6 +34,7 @@ export function ResultCard({
     language_used,
     insights,
     isSpeaking = false,
+    duration,
     onClose,
 }: ResultCardProps) {
     const [displayedText, setDisplayedText] = useState("");
@@ -40,6 +42,13 @@ export function ResultCard({
     // Typewriter effect
     useEffect(() => {
         let index = 0;
+
+        // Calculate dynamic interval if duration is provided
+        // Subtract a small buffer (e.g. 100ms) to ensure text finishes slightly before audio
+        const calculatedInterval = duration
+            ? Math.max(10, (duration - 300) / transcription.length)
+            : 50; // Faster default if no duration
+
         const interval = setInterval(() => {
             if (index <= transcription.length) {
                 setDisplayedText(transcription.slice(0, index));
@@ -47,10 +56,10 @@ export function ResultCard({
             } else {
                 clearInterval(interval);
             }
-        }, 75); // Adjust speed here
+        }, calculatedInterval);
 
         return () => clearInterval(interval);
-    }, [transcription]);
+    }, [transcription, duration]);
 
     // Determine sentiment color
     const getSentimentColor = (s: string) => {

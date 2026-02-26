@@ -187,7 +187,7 @@ async def kuro_endpoint(request: KuroRequest):
 
 @app.post("/tts")
 async def tts_endpoint(request: TTSRequest):
-    """Generate audio from text using Kokoro"""
+    """Generate audio from text using Groq TTS"""
     if not request.text:
         raise HTTPException(status_code=400, detail="Text is required")
     
